@@ -60,6 +60,8 @@ let guiCB
 let foxglove_config = { url: "ws://localhost:8765" }
 let lidarMesh: Mesh
 let lidarMaterial: Material
+let activeCamera: PerspectiveCamera | null = null;
+const cameras = { Main: activeCamera, HeadCamera: null };
 
 Object3D.DEFAULT_UP = new Vector3(0, 0, 1)
 const animation = { enabled: true, play: true }
@@ -105,6 +107,20 @@ function loadRobot() {
     "./go2.urdf", // The path to the URDF within the package OR absolute
     (r) => {
       robot = r
+
+      // Find the head link in the robot
+      const headLink = robot.getObjectByName('Head_upper');
+      if (headLink) {
+        // Attach a new camera to the head link
+        const headCamera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // headCamera.position.set(-2.13, 5, 2.5)
+        headLink.add(headCamera);
+
+        // headCamera.up.set(0, 0, -1)
+        // headCamera.position.set(-1, 1, -1); // Adjust position relative to the head
+        // headCamera.rotateX(90 * Math.PI / 180); // Adjust position relative to the head
+        cameras['HeadCamera'] = headCamera;
+      }
       // The robot is loaded!
       scene.add(robot);
       // robot.rotateX(270 * Math.PI / 180)
@@ -511,6 +527,8 @@ function init() {
   {
     camera = new PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100)
     camera.position.set(-2.13, 5, 2.5)
+    activeCamera = camera
+    cameras["Main"] = camera
     window.camera = camera
     //camera.up.set(0,0,1)
   }
@@ -603,6 +621,14 @@ function init() {
     foxglove.add(foxglove_config, 'url').onFinishChange(() => {
       init_websocket(transform_cb, foxglove_config.url)
     })
+
+    gui.add({ Camera: 'Main' }, 'Camera', Object.keys(cameras)).onChange((value) => {
+      if (cameras[value]) {
+        activeCamera = cameras[value];
+      } else {
+        activeCamera = cameras["Main"]
+      }
+    });
     const cubeFolder = gui.addFolder('Cubes')
 
     // cubeFolder.add(cube.position, 'x').min(-5).max(5).step(0.5).name('pos x')
@@ -691,15 +717,21 @@ function animate() {
 
   if (resizeRendererToDisplaySize(renderer)) {
     const canvas = renderer.domElement
-    camera.aspect = canvas.clientWidth / canvas.clientHeight
-    camera.updateProjectionMatrix()
+    if (activeCamera) {
+      activeCamera.aspect = canvas.clientWidth / canvas.clientHeight
+      activeCamera.updateProjectionMatrix()
+    }
   }
 
   if (!renderer.xr.isPresenting) {
     cameraControls.update(); // Update OrbitControls only when not in VR
   }
 
-  renderer.render(scene, camera)
+  if (activeCamera) {
+    renderer.render(scene, activeCamera)
+  } else {
+    console.log("No active camera", activeCamera);
+  }
 }
 
 
