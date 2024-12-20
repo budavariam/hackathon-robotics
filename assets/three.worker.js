@@ -129,7 +129,7 @@
         var f;
         e.locateFile
           ? ((f = "libvoxel.wasm"), T(f) || (f = G(f)))
-          : (f = new URL("/assets/libvoxel.1ba27f06.wasm", self.location).href);
+          : (f = new URL("./libvoxel.1ba27f06.wasm", self.location).href);
         function x(t) {
           try {
             if (t == f && m) return new Uint8Array(m);
